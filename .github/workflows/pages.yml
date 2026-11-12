@@ -1,9 +1,9 @@
-# Publish the repo root (the 3D viewer; every model / PDF is encrypted) as the GitHub Pages site on push to main.
+# Publish the repo root (the 3D viewer; every model / PDF is encrypted) as the GitHub Pages site on push to master.
 # Settings -> Pages -> Source must be "GitHub Actions".
 name: pages
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 permissions:
   contents: read
