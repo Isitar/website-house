@@ -1,0 +1,34 @@
+# Publish the repo root (the 3D viewer; every model / PDF is encrypted) as the GitHub Pages site on push to main.
+# Settings -> Pages -> Source must be "GitHub Actions".
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: refuse unencrypted models / PDFs
+        run: |
+          bad=$(find models pdf -type f ! -name '*.enc' 2>/dev/null || true)
+          [ -z "$bad" ] || { echo "unencrypted: $bad"; exit 1; }
+      - name: site folder (without .git / .github / README)
+        run: rsync -a --exclude .git --exclude .github --exclude README.md --exclude _site ./ _site/
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5

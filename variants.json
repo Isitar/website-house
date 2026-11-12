@@ -1,0 +1,35 @@
+{
+ "default": "Baueingabe",
+ "variants": [
+  {
+   "id": "Baueingabe",
+   "glb": "models/Baueingabe.glb.enc",
+   "pdf": null,
+   "built": "10.11. 00:34"
+  },
+  {
+   "id": "M",
+   "glb": "models/M.glb.enc",
+   "pdf": "pdf/plans_M.pdf.enc",
+   "built": "25.10. 16:38"
+  },
+  {
+   "id": "O",
+   "glb": "models/O.glb.enc",
+   "pdf": "pdf/plans_O.pdf.enc",
+   "built": "25.10. 16:39"
+  },
+  {
+   "id": "O.21",
+   "glb": "models/O.21.glb.enc",
+   "pdf": "pdf/plans_O.21.pdf.enc",
+   "built": "25.10. 16:40"
+  },
+  {
+   "id": "O.22",
+   "glb": "models/O.22.glb.enc",
+   "pdf": "pdf/plans_O.22.pdf.enc",
+   "built": "25.10. 22:55"
+  }
+ ]
+}

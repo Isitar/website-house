@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Fassade 3D</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "./vendor/three/build/three.module.min.js",
+        "three/addons/": "./vendor/three/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <header id="bar">
+    <select id="variant" aria-label="Variante"></select>
+    <button id="pdf" class="btn" aria-disabled="true">PDF</button>
+    <button id="reset" class="btn" title="Ansicht zurücksetzen">⟲</button>
+  </header>
+
+  <div id="view"></div>
+
+  <nav id="levels" aria-label="Stockwerke"></nav>
+  <p id="hint">Tippen: Stockwerk ein/aus · lange drücken: nur bis hier · Doppeltipp ins Modell: dort drehen</p>
+
+  <form id="login" hidden>
+    <h1>Fassade 3D</h1>
+    <input id="pw" type="password" placeholder="Passwort" autocomplete="current-password" required>
+    <label><input id="pw-remember" type="checkbox" checked> auf diesem Gerät merken</label>
+    <button id="pw-go" class="btn">Öffnen</button>
+    <p id="pw-error" hidden>Falsches Passwort</p>
+  </form>
+
+  <div id="loading"><div id="loading-text">lädt …</div></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
