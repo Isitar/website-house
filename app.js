@@ -399,7 +399,7 @@ function decrypt(k, buf) {
 }
 
 async function fetchDecrypted(url, onProgress) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-cache" }); // revalidate (Pages: max-age 600), 304 when unchanged
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   // content-length is only for the progress: with gzip (GitHub Pages) it is the compressed size, not the data's
   const total = +res.headers.get("content-length") || 0;
