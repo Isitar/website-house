@@ -38,7 +38,12 @@ body {
   background: var(--panel);
   backdrop-filter: blur(8px);
 }
-#bar { top: 0; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--line); }
+#bar { top: 0; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+#sun { flex-basis: 100%; display: flex; gap: 8px; align-items: center; min-width: 0; }
+#sun .sun-label { color: var(--muted); }
+#sun select { flex: 1 1 auto; max-width: 180px; }
+#sun-info { order: 9; flex: 1 1 100%; font-size: 12px; color: var(--muted); }
+#sun-info:empty { display: none; }
 #levels {
   bottom: 0; padding-bottom: max(8px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);

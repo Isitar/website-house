@@ -180,13 +180,99 @@ function frame() {
 
   // shadow box round the whole site
   const all = new THREE.Box3().setFromObject(current.root);
-  const r = all.getSize(new THREE.Vector3()).length() / 2;
-  const sunDir = new THREE.Vector3(-Math.cos(0.7) * Math.SQRT1_2, Math.sin(0.7), Math.cos(0.7) * Math.SQRT1_2);
+  site = { center, r: all.getSize(new THREE.Vector3()).length() / 2 };
+  placeSun();
+  framed = true;
+}
+
+// --- sun: real position at a chosen date / time (Aarau Rohr) ------------------------------------
+const SITE = { lat: 47.405, lon: 8.07 };  // Parzelle 7109, Aarau Rohr
+const NORTH = 10;  // true north is 10 deg east of the model's +y (north arrow on 3_10 Situation)
+const DAYS = [
+  { id: "jun", label: "21. Juni", m: 5, d: 21 },
+  { id: "mar", label: "21. März / Sept.", m: 2, d: 21 },
+  { id: "dez", label: "21. Dez.", m: 11, d: 21 },
+  { id: "heute", label: "heute" },
+];
+const HOURS = [8, 12, 18];
+let site = null;               // { center, r } from frame()
+let sunState = { hour: null, day: "jun" };  // hour null = the old fixed light from the south-west
+
+// Swiss time: CET, CEST from the last Sunday of March to the last Sunday of October (01:00 UTC)
+function lastSunday(y, m) { const d = new Date(Date.UTC(y, m + 1, 0)); return Date.UTC(y, m, d.getUTCDate() - d.getUTCDay(), 1); }
+function swissToUtc(y, m, d, h) {
+  const guess = Date.UTC(y, m, d, h - 1);
+  const dst = guess >= lastSunday(y, 2) && guess < lastSunday(y, 9);
+  return Date.UTC(y, m, d, h - (dst ? 2 : 1));
+}
+
+// azimuth (deg from north, clockwise) and elevation (deg) of the sun; low-precision almanac (~0.1 deg)
+function sunPosition(utcMs) {
+  const rad = Math.PI / 180;
+  const n = utcMs / 86400000 + 2440587.5 - 2451545.0;
+  const L = 280.46 + 0.9856474 * n, g = (357.528 + 0.9856003 * n) * rad;
+  const lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * rad;
+  const eps = (23.439 - 0.0000004 * n) * rad;
+  const ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam));
+  const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+  const H = ((18.697374558 + 24.06570982441908 * n) * 15 + SITE.lon) * rad - ra;
+  const phi = SITE.lat * rad;
+  const el = Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H));
+  const az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(phi) - Math.sin(phi) * Math.cos(H));
+  return { az: ((az / rad) % 360 + 360) % 360, el: el / rad };
+}
+
+function sunDirection() {
+  if (sunState.hour === null) return { dir: new THREE.Vector3(-Math.cos(0.7) * Math.SQRT1_2, Math.sin(0.7), Math.cos(0.7) * Math.SQRT1_2), el: 40 };
+  const now = new Date();
+  const day = DAYS.find((x) => x.id === sunState.day) || DAYS[0];
+  const [m, d] = day.m === undefined ? [now.getMonth(), now.getDate()] : [day.m, day.d];
+  const { az, el } = sunPosition(swissToUtc(now.getFullYear(), m, d, sunState.hour));
+  const a = (az - NORTH) * Math.PI / 180, e = el * Math.PI / 180;
+  // model frame: x east, y north (glTF: -z); a = bearing in the model frame
+  return { dir: new THREE.Vector3(Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e)), el, az };
+}
+
+function placeSun() {
+  const { dir, el, az } = sunDirection();
+  const up = el > 0;
+  sun.visible = up;
+  // lower sun: a little weaker and warmer
+  const k = Math.min(1, Math.max(0, el) / 20);
+  sun.intensity = 2.2 * (0.55 + 0.45 * k);
+  sun.color.setRGB(1, 0.82 + 0.18 * k, 0.65 + 0.35 * k);
+  const info = $("sun-info");
+  info.textContent = sunState.hour === null ? "" : up ? `Sonne ${Math.round(az)}°, ${Math.round(el)}° hoch` : "Sonne unter dem Horizont";
+  if (!site) return;
+  const { center, r } = site;
   sun.target.position.copy(center);
-  sun.position.copy(center).addScaledVector(sunDir, r * 2);
+  sun.position.copy(center).addScaledVector(dir, r * 2);
   Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.1, far: r * 4 });
   sun.shadow.camera.updateProjectionMatrix();
-  framed = true;
+}
+
+function applySun() {
+  for (const chip of $("sun").querySelectorAll(".chip")) chip.setAttribute("aria-pressed", String(+chip.dataset.h === sunState.hour));
+  $("sun-day").value = sunState.day;
+  placeSun();
+  writeHash();
+  render();
+}
+
+function buildSun() {
+  const box = $("sun");
+  for (const h of HOURS) {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = `${h}:00`;
+    chip.dataset.h = h;
+    chip.addEventListener("click", () => { sunState.hour = sunState.hour === h ? null : h; applySun(); });
+    box.insertBefore(chip, $("sun-info"));
+  }
+  const sel = $("sun-day");
+  for (const d of DAYS) sel.add(new Option(d.label, d.id));
+  sel.addEventListener("change", () => { sunState.day = sel.value; if (sunState.hour === null) sunState.hour = 12; applySun(); });
+  applySun();
 }
 
 // --- levels ---------------------------------------------------------------------------------
@@ -275,12 +361,15 @@ renderer.domElement.addEventListener("pointerup", (e) => {
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   hidden = new Set((p.get("aus") || "").split(",").filter(Boolean).map(Number));
+  const h = p.get("sonne");
+  sunState = { hour: HOURS.includes(+h) ? +h : null, day: DAYS.some((d) => d.id === p.get("tag")) ? p.get("tag") : "jun" };
   return p.get("v");
 }
 function writeHash() {
   if (!current) return;
   const p = new URLSearchParams({ v: current.id });
   if (hidden.size) p.set("aus", [...hidden].sort().join(","));
+  if (sunState.hour !== null) { p.set("sonne", sunState.hour); p.set("tag", sunState.day); }
   history.replaceState(null, "", "#" + p.toString().replace(/%2C/g, ","));
 }
 
@@ -399,6 +488,7 @@ function login(cfg) {
 // --- start ----------------------------------------------------------------------------------
 async function start() {
   buildChips();
+  buildSun();
   if (!window.crypto?.subtle) {
     setLoading("Entschlüsseln geht nur über https (oder localhost)");
     return;
@@ -424,10 +514,12 @@ async function start() {
   window.addEventListener("hashchange", () => {
     const id = readHash();
     applyLevels();
+    applySun();
     if (id && id !== current?.id) showVariant(id);
   });
   const wanted = readHash() || data.default;
   applyLevels();
+  applySun();
   showVariant(wanted);
 }
 start();
